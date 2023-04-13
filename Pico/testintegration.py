@@ -98,8 +98,8 @@ def get(request):
 # MAIN LOOP
 
 def serve(connection):
-    #Start a web server
     while True:
+        # HTTP web server
         client = connection.accept()[0]
         request = client.recv(1024)
         request = str(request)
@@ -110,6 +110,10 @@ def serve(connection):
         html = get(request)
         client.send(html)
         client.close()
+        
+        print("ready for other stuff")
+        
+        sleep(frameDelay)
 
 # set up pins
 
@@ -124,7 +128,9 @@ servo.duty_ns(SERVO_MIN)
 # begin loop
 
 try:
-    
     print("Hello, world!")
+    ip = connect()
+    connection = open_socket(ip)
+    serve(connection) # enters main loop
 except KeyboardInterrupt:
     machine.reset()
