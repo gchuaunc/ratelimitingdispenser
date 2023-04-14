@@ -6,6 +6,7 @@ from time import sleep
 from machine import Pin, PWM
 from mfrc522 import MFRC522
 import utime
+import _thread
 
 # consts
 
@@ -20,7 +21,9 @@ servo = None
 ssid = 'CGNET'
 password = 'helloworld123'
 pin = '1234'
-frameDelay = 50 # 20 fps
+frameDelay = 0.05 # 20 fps
+rechargeFrames = 100 # 5 seconds at 20fps
+frames = 0
 
 # vars
 
@@ -29,6 +32,8 @@ numCandies = 0;
 # functs
 
 def updateLeds():
+    global numCandies
+    global leds
     if numCandies == 0:
         leds[0].off()
         leds[1].off()
@@ -51,7 +56,28 @@ def updateLeds():
         numCandies = 0
         updateLeds()
 
+def setCandies(amt):
+    global numCandies
+    amt = max(0, amt)
+    amt = min(3, amt)
+    numCandies = amt
+    print(f'Set numCandies to {amt}')
 
+def dispense():
+    global numCandies
+    global servo
+    global SERVO_MAX
+    global SERVO_MIN
+    if (numCandies > 0):
+        print('Dispensing candy...')
+        numCandies -= 1
+        updateLeds()
+        servo.duty_ns(SERVO_MAX)
+        sleep(2)
+        servo.duty_ns(SERVO_MIN)
+        sleep(2)
+    else:
+        print('Cannot dispense candy, none left')
 
 def connect():
     #Connect to WLAN
@@ -76,7 +102,7 @@ def open_socket(ip):
     return connection
 
 def get(request):
-    global numCandies;
+    global numCandies
     print(f'GET: {request}')
     html = '{"status": "404"}'
     if (request == '/rld'):
@@ -85,17 +111,16 @@ def get(request):
         html = '{"status": ' + str(numCandies) + '}'
     elif (request == f'/{pin}?disp'):
         print('Force dispensed candy')
+        dispense()
         html = '{"status": "success"}'
     elif (f'/{pin}?set=' in request):
         amt = int(request[len(f'/{pin}?set='):])
-        amt = max(0, amt)
-        amt = min(3, amt)
-        print(f'Set amount to {amt}')
+        setCandies(amt)
+        updateLeds()
         html = '{"status": "success"}'
-        numCandies = amt
     return str(html)
 
-# MAIN LOOP
+# HTTP LOOP: thread 0
 
 def serve(connection):
     while True:
@@ -110,9 +135,28 @@ def serve(connection):
         html = get(request)
         client.send(html)
         client.close()
-        
-        print("ready for other stuff")
-        
+        print("HTTP ready for more requests")
+
+# MAIN LOOP: thread 1
+
+def loop():
+    global btn
+    global frameDelay
+    global numCandies
+    global frames
+    global rechargeFrames
+    while True:
+        frames += 1
+        if (frames > rechargeFrames):
+            print("Candies recharged from time")
+            frames = 0
+            setCandies(numCandies + 1)
+            updateLeds()
+            
+        if (btn.value()):
+            print("Button pressed!")
+            dispense()
+            
         sleep(frameDelay)
 
 # set up pins
@@ -128,9 +172,10 @@ servo.duty_ns(SERVO_MIN)
 # begin loop
 
 try:
-    print("Hello, world!")
+    print("Initializing...")
     ip = connect()
     connection = open_socket(ip)
-    serve(connection) # enters main loop
+    _thread.start_new_thread(loop, ()) # enter main loop on thread 1
+    serve(connection) # enter HTTP loop on thread 0
 except KeyboardInterrupt:
     machine.reset()
