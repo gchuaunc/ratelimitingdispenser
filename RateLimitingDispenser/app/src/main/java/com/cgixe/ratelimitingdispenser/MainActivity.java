@@ -24,13 +24,12 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class MainActivity extends AppCompatActivity implements UrlRequestListener {
+public class MainActivity extends AppCompatActivity {
 
     private final String TAG = "MainActivity";
     private EditText txtIp;
     private EditText txtPin;
     private View rootView;
-    private CronetEngine cronetEngine;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,42 +64,9 @@ public class MainActivity extends AppCompatActivity implements UrlRequestListene
     }
 
     private void checkIp(String ip, String pin) {
-        if (cronetEngine == null) {
-            CronetEngine.Builder myBuilder = new CronetEngine.Builder(this);
-            cronetEngine = myBuilder.build();
-        }
-        Executor executor = Executors.newSingleThreadExecutor();
-        UrlRequest.Builder requestBuilder = cronetEngine.newUrlRequestBuilder(
-                "http://" + ip + "/" + pin, new UrlRequestCallback(this), executor);
-        UrlRequest request = requestBuilder.build();
-        request.start();
-    }
-
-    @Override
-    public void requestComplete(URI requestUri, String responseText) {
-        Log.i(TAG, "Response: " + responseText);
-        try {
-            JSONObject obj = new JSONObject(responseText);
-            String status = obj.getString("status");
-            Log.i(TAG, "Status is " + status);
-            if (!status.equals("404")) {
-                Intent intent = new Intent(MainActivity.this, AdminActivity.class);
-                intent.putExtra("ip", requestUri.getHost());
-                intent.putExtra("pin", txtPin.getText().toString());
-                MainActivity.this.startActivity(intent);
-            } else {
-                Log.e(TAG, "Status was 404, aborting!");
-                Snackbar.make(rootView, "Incorrect PIN for dispenser!", Snackbar.LENGTH_LONG).show();
-            }
-        } catch (JSONException ex) {
-            Log.e(TAG, "Failed to parse JSON: " + responseText);
-            Snackbar.make(rootView, "Failed to parse JSON, this may not be the dispenser's address.", Snackbar.LENGTH_LONG).show();
-        }
-    }
-
-    @Override
-    public void requestFailed(CronetException exception) {
-        Log.i(TAG,"Request failed! " + exception.getMessage());
-        Snackbar.make(rootView, "Failed to connect to dispenser: " + exception.getMessage(), Snackbar.LENGTH_LONG).show();
+        Intent intent = new Intent(MainActivity.this, AdminActivity.class);
+        intent.putExtra("ip", "10.137.0.32");
+        intent.putExtra("pin", txtPin.getText().toString());
+        MainActivity.this.startActivity(intent);
     }
 }

@@ -23,7 +23,7 @@ import java.net.URI;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-public class AdminActivity extends AppCompatActivity implements UrlRequestListener {
+public class AdminActivity extends AppCompatActivity {
 
     private TextView ipTextView;
     private TextView curCandiesTextView;
@@ -31,8 +31,8 @@ public class AdminActivity extends AppCompatActivity implements UrlRequestListen
     private View rootView;
     private String ip;
     private final String TAG = "AdminActivity";
-    private CronetEngine cronetEngine;
     private String pin;
+    private int candies = 3;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,42 +75,25 @@ public class AdminActivity extends AppCompatActivity implements UrlRequestListen
     }
 
     private void forceDispense() {
-        if (cronetEngine == null) {
-            CronetEngine.Builder myBuilder = new CronetEngine.Builder(this);
-            cronetEngine = myBuilder.build();
-        }
-        Executor executor = Executors.newSingleThreadExecutor();
-        UrlRequest.Builder requestBuilder = cronetEngine.newUrlRequestBuilder(
-                "http://" + ip + "/" + pin + "?disp", new UrlRequestCallback(this), executor);
-        UrlRequest request = requestBuilder.build();
-        request.start();
+        Log.i(TAG, "Dispensed successfully");
+        Snackbar.make(rootView, "Successfully dispensed!", Snackbar.LENGTH_LONG).show();
+        candies--;
+        if (candies < 0) candies = 0;
+        updateCandies();
     }
 
     private void setCharge(int amount) {
-        if (cronetEngine == null) {
-            CronetEngine.Builder myBuilder = new CronetEngine.Builder(this);
-            cronetEngine = myBuilder.build();
-        }
-        Executor executor = Executors.newSingleThreadExecutor();
-        UrlRequest.Builder requestBuilder = cronetEngine.newUrlRequestBuilder(
-                "http://" + ip + "/" + pin + "?set=" + amount, new UrlRequestCallback(this), executor);
-        UrlRequest request = requestBuilder.build();
-        request.start();
+        candies = Math.min(3, amount);
+        candies = Math.max(0, candies);
+        Snackbar.make(rootView, "The charge was updated successfully!", Snackbar.LENGTH_LONG).show();
+        updateCandies();
     }
 
     private void updateCandies() {
-        if (cronetEngine == null) {
-            CronetEngine.Builder myBuilder = new CronetEngine.Builder(this);
-            cronetEngine = myBuilder.build();
-        }
-        Executor executor = Executors.newSingleThreadExecutor();
-        UrlRequest.Builder requestBuilder = cronetEngine.newUrlRequestBuilder(
-                "http://" + ip + "/" + pin, new UrlRequestCallback(this), executor);
-        UrlRequest request = requestBuilder.build();
-        request.start();
+        curCandiesTextView.setText(candies + "/3 Candies");
+        Log.i(TAG, "Updating candy display to " + candies);
     }
 
-    @Override
     public void requestComplete(URI requestUri, String responseText) {
         String path = requestUri.getPath();
         String query = requestUri.getQuery();
@@ -127,8 +110,7 @@ public class AdminActivity extends AppCompatActivity implements UrlRequestListen
                     // GET /pin?disp
                     String res = obj.getString("status");
                     if (res.equals("success")) {
-                        Log.i(TAG, "Dispensed successfully");
-                        Snackbar.make(rootView, "Successfully dispensed!", Snackbar.LENGTH_LONG).show();
+
                     } else {
                         Log.w(TAG, "Did not dispense successfully: " + res);
                         Snackbar.make(rootView, "Failed to dispense", Snackbar.LENGTH_LONG).show();
@@ -151,11 +133,5 @@ public class AdminActivity extends AppCompatActivity implements UrlRequestListen
             Log.e(TAG, "Error parsing JSON from response: " + responseText);
             Snackbar.make(rootView, "Failed to parse JSON, this may not be the dispenser's address.", Snackbar.LENGTH_LONG).show();
         }
-    }
-
-    @Override
-    public void requestFailed(CronetException exception) {
-        Log.e(TAG, "HTTP request failed: " + exception.getMessage());
-        Snackbar.make(rootView, "Failed to connect to dispenser: " + exception.getMessage(), Snackbar.LENGTH_LONG).show();
     }
 }
