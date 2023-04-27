@@ -10,6 +10,7 @@ import _thread
 
 # consts
 
+ENABLE_SERVER = False
 ledPins = [0, 1, 2]
 leds = []
 btnPin = 3
@@ -201,9 +202,14 @@ for i in range(6):
 
 try:
     print("Initializing...")
-    ip = connect()
-    connection = open_socket(ip)
-    _thread.start_new_thread(loop, ()) # enter main loop on thread 1
-    serve(connection) # enter HTTP loop on thread 0
+    if ENABLE_SERVER:
+        print("Wi-Fi server ENABLED")
+        ip = connect()
+        connection = open_socket(ip)
+        _thread.start_new_thread(loop, ()) # enter main loop on thread 1
+        serve(connection) # enter HTTP loop on thread 0
+    else:
+        print("Wi-Fi server DISABLED")
+        loop()
 except KeyboardInterrupt:
     machine.reset()
