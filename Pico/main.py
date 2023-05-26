@@ -10,7 +10,7 @@ import _thread
 
 # consts
 
-ENABLE_SERVER = False
+ENABLE_SERVER = True
 ledPins = [0, 1, 2]
 leds = []
 btnPin = 3
@@ -19,10 +19,12 @@ SERVO_MIN = 500000
 SERVO_MAX = 2500000
 servoPin = 4
 servo = None
-ssid = 'hpmint'
-password = 'JoPxE92G'
-#ssid = 'CGNET'
-#password = 'helloworld123'
+#ssid = 'hpmint'
+#password = 'JoPxE92G'
+ssid = 'CGNET'
+password = 'helloworld123'
+#ssid = 'Arjun\'s Phone'
+#password='abcd1234'
 pin = '1234'
 frameDelay = 0.05 # 20 fps
 rechargeFrames = 100 # 5 seconds at 20fps
@@ -210,6 +212,7 @@ try:
         serve(connection) # enter HTTP loop on thread 0
     else:
         print("Wi-Fi server DISABLED")
-        loop()
+        loop() # main loop on thread 0 instead
 except KeyboardInterrupt:
     machine.reset()
+
